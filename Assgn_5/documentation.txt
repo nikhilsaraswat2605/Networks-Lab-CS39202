@@ -1,0 +1,85 @@
+The code includes two data structures:
+
+struct Send_Table : A structure that holds the messages that have been sent to the socket.
+    -message : An array of pointers to store messages.
+    -length : An array of integers to store the length of the messages.
+    -start : An integer to hold the starting index of the message array.
+    -end : An integer to hold the ending index of the message array.
+    -count : An integer to hold the number of messages currently stored in the message array.
+
+struct Recv_Table : A structure that holds the messages that have been received from the socket.
+    -message : An array of pointers to store messages.
+    -length : An array of integers to store the length of the messages.
+    -start : An integer to hold the starting index of the message array.
+    -end : An integer to hold the ending index of the message array.
+    -count : An integer to hold the number of messages currently stored in the message array.
+
+The functions and their descriptions are:
+
+    int min(int a, int b) - 
+        This function takes two integer arguments and returns the minimum value of the two.
+
+
+    void *Send_Message(void *sockfd) - 
+        This function is executed by the thread R. It sends messages to the socket.
+        It uses Sent_Message to store messages to be sent and Send_mutex to ensure thread safety while accessing the data structure.
+        It sends messages using the send() function and waits for 5 seconds using sleep().
+        If it is unable to send messages due to an error or if the connection is closed by the client, it terminates the program using pthread_exit().
+
+
+    void *Receive_Message(void *sockfd) - 
+        This function is executed by the thread S. It receives messages from the socket.
+        It uses Received_Message to store messages received and Recv_mutex to ensure thread safety while accessing the data structure.
+        It receives messages using the recv() function.
+        If it is unable to receive messages due to an error or if the connection is closed by the client, it terminates the program using pthread_exit().
+
+    int my_socket(int domain, int type, int protocol) -
+        This function is creating a socket using the socket() function only if type is SOCK_MyTCP
+
+    int my_bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) -
+        This function is binding the socket to the address using the bind() function.
+
+    int my_listen(int sockfd, int backlog) -
+        This function is listening for connections on the socket using the listen() function.
+    
+    int my_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen) -
+        This function is accepting a connection on the socket using the accept() function.
+        It creates a new socket for the incoming connection and returns the new socket descriptor.
+        It also creates a new threads to receive messages from the socket and sends messages to the socket and allocates memory for the data structures and initializes them.
+        It also initializes the mutex locks variables.
+    
+    int my_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) -
+        This function is connecting to the server using the connect() function.
+        It creates a new threads to receive messages from the socket and sends messages to the socket and allocates memory for the data structures and initializes them.
+        It also initializes the mutex locks variables.
+
+    int my_send(int sockfd, const void *buf, size_t len, int flags) -
+        This function is sending messages to the socket using the send() function, but in message oriented fashion.
+        It stores the message in the Send_Table data structure, and if the number of messages stored in the data structure is greater than 10, it waits.
+        It increments the count and start variables of the Send_Table data structure.
+
+    int my_recv(int sockfd, void *buf, size_t len, int flags) -
+        This function is receiving messages from the socket using the recv() function, but in message oriented fashion.
+        It gets the message from the Recv_Table data structure, and if the there are no messages in the data structure, it waits.
+        It increments the count and end variables of the Recv_Table data structure.
+    
+    my_close(int sockfd) -
+        The function begins by calling the sleep function, which pauses the current thread for T + 1.
+        It then cancels two pthreads, R and S, that were previously created within the program.
+        The function then enters a loop that deallocates memory for Received_Message and Sent_Message. 
+        After deallocating memory, the function destroys two mutexes, Recv_mutex and Send_mutex.
+        Finally, the function returns the result of calling the close function on the sockfd argument.
+        Overall, the my_close function is a cleanup function that is called when the program is finished with a network connection. It cancels any running threads, frees memory and synchronization objects, and closes the network socket.
+
+
+
+Question --- A description of exactly what happens, with details of which functions are  called in what sequence and what tables are used in what manner when (i)  a my_send call is made, and (ii) a my_recv call is made. 
+
+(i) If we call my_send() function, it stores the message in the Send_Table data structure, and if the number of messages stored in the data structure is greater than 10, it waits.
+and if it gets empty space in the data structure, it stores the message in the data structure and increments the count and start variables of the Send_Table data structure.
+And thread S will send the message to the socket using the send() function in loop until the message is sent completely, hence the message is sent in message oriented fashion and clears the message in the Send_Table data structure.
+
+(ii) After the my_send() completes, then my_recv() is called, and it gets the message from the Recv_Table data structure, and if the there are no messages in the data structure, it waits.
+And thread R will receive the message from the socket using the recv() function in loop until the message is received completely, hence the message is received in message oriented fashion and stores the message in the Recv_Table data structure.
+And if it gets a message in the data structure, it stores the message in the data structure and increments the count and end variables of the Recv_Table data structure.
+And then the my_recv() function returns the message to the user using the buf argument.

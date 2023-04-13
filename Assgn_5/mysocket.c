@@ -239,11 +239,12 @@ int my_recv(int sockfd, void *buf, size_t len, int flags)
     pthread_mutex_lock(&Recv_mutex); // lock the mutex
     for (int i = 0; i < min(len, Received_Message.length[Received_Message.start]); i++)
         ((char *)buf)[i] = ((char *)Received_Message.message[Received_Message.start])[i]; // copy the message to buf
+    int msg_len = Received_Message.length[Received_Message.start];
     Received_Message.start = (Received_Message.start + 1) % 10; // update the start of Received_Message
     Received_Message.count--; // update the count of Received_Message
     // unlock the mutex
     pthread_mutex_unlock(&Recv_mutex); // unlock the mutex
-    return min(len, Received_Message.length[Received_Message.start]); // return the number of bytes received
+    return min(len, msg_len); // return the number of bytes received
 }
 
 int my_send(int sockfd, const void *buf, size_t len, int flags)
